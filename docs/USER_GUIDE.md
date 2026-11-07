@@ -108,3 +108,7 @@ Markdown is translated as text: links and emphasis usually survive, but check th
 | *… not translated. Too many requests …* | Try again in a minute. |
 | *… you may not edit the existing translation.* | You lack the right to edit that language version. |
 | *The German (Switzerland) version was created but not translated: …* | (Localizations menu) The copy was made, but Supertext failed; use **Translate with Supertext** later. |
+
+## Support
+
+Questions, problems or ideas: use the [Supertext support form](https://integrations.supertext.com/en/support?platform=orchard-core). Mention the version of Orchard Core and of the plugin, what you did and what you expected; an error message helps a lot. You get an answer by email, in your language.
