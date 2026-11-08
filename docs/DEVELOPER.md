@@ -186,6 +186,28 @@ BASE_URL=http://127.0.0.1:8096 DEMO_ADMIN_EMAIL=… DEMO_ADMIN_PASSWORD=… DEMO
 
 New texts in the flow: run the stand-in with `STAND_IN_DUMP=<dir>` and translate what it writes to `<dir>/de-CH.json` into `sample-de.json`. `CHROMIUM_PATH` points Playwright at an installed Chromium.
 
+## Demo movie
+
+`docs/images/demo.gif` at the top of the README is recorded by `Tests/Docs/movie.mjs` with the shared movie kit (`Tests/Docs/movie/movie-kit.mjs`, Playwright screencast + ffmpeg; `Tests/Docs/movie/assets/`: the Supertext logo and the Inter font, SIL Open Font License in `Inter-LICENSE.txt`). It needs ffmpeg, and for the voice `pip install piper-tts`. Run it against a **fresh** demo with the stand-in, like the screenshots, after an API key is stored (the install movie below stores one; or start the demo with `SUPERTEXT_API_KEY=test`):
+
+```bash
+cd Tests/Docs && npm install && node stand-in.mjs &
+# fresh demo (see Local development) with SUPERTEXT_API_ENDPOINT=http://127.0.0.1:8765/v1/ and SUPERTEXT_REPORT_URL=http://127.0.0.1:8765/report
+BASE_URL=http://127.0.0.1:8096 DEMO_EDITOR_EMAIL=… DEMO_EDITOR_PASSWORD=… npm run movie
+```
+
+About 40 seconds, 1280×720, an English voice and English captions: the demo editor opens the English article *Translating with Supertext*, clicks *Translate with Supertext* at the bottom of the editor, ticks *German (Switzerland)*, clicks *Translate* (the waiting time is cut) and opens the German draft. The script writes the GIF (800 px, 12 fps, silent; keep it under 3 MB) to `docs/images/demo.gif` and the MP4 to `Tests/Docs/movie/out/OrchardCore-Supertext-Translation.mp4` (git-ignored, not committed; `MOVIE_OUT` changes the path). The voice model (63 MB, pinned revision, checked by SHA-256) is downloaded once into `Tests/Docs/movie/voice-cache/` (git-ignored, never committed); the time spent generating speech is cut from the movie. `MOVIE_VOICE=0` makes a silent movie. Re-record it in the same commit when the translate page changes.
+
+**Install and configuration movie** (`Tests/Docs/movie-install.mjs`, `npm run movie:install`): the same kit, voice and look, for administrators. Run it on a fresh demo started **without** `SUPERTEXT_API_KEY` (the script types the made-up key `st-demo-0000-0000-0000`; the stand-in accepts any key), signed in as the demo **administrator**:
+
+```bash
+BASE_URL=http://127.0.0.1:8096 DEMO_ADMIN_EMAIL=… DEMO_ADMIN_PASSWORD=… npm run movie:install
+```
+
+About 93 seconds: a terminal (`kit.terminal()`) with the commands from `docs/INSTALLATION.md` (`dotnet pack`, `dotnet add package`, `dotnet run`; output shortened), then the admin: *Tools → Features*, search *Supertext*, *Enable* (the script disables the feature first, off camera), *Settings → Supertext*, where the key comes from (supertext.com → Integrations → API; create an account at supertext.com), the key typed into *API key*, *Save*, the *API key check* (*the connection to Supertext works*), the *Language mapping* (German (Switzerland) → `de-CH`, *Translation review* left off), *Save*, and the *Supertext* button in *Content Items*. The endpoint hint (a local URL) is removed from the page. No GIF; the MP4 goes to `Tests/Docs/movie/out/OrchardCore-Supertext-Translation-install.mp4` (git-ignored, not committed; `MOVIE_OUT` changes the path). Re-record it when the installation steps, the Features entry or Settings → Supertext change. Record the install movie first: the demo movie needs the stored key and an untranslated article.
+
+Voice: Piper voice “alba” (en_GB), trained on a dataset from the University of Edinburgh's Centre for Speech Technology Research, CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+
 ## Demo (Railway)
 
 The public demo is a container built from `demo/Dockerfile`: Orchard Core 3.0.1 with TheBlogTheme, English with German, French and Italian (Switzerland), and this module by project reference. It runs on Railway in the `supertext-cms-demos` project, service `orchardcore`, region EU West (Amsterdam): <https://orchardcore-production.up.railway.app/> (admin: `/Admin`, sign in at `/Login` with the e-mail address).

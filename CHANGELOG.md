@@ -25,6 +25,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - French and Italian interface (and German where it was missing): buttons, the Translate with Supertext page, Settings → Supertext, notifications and Supertext error messages follow the admin's interface language (`Localization/de.po`, `fr.po`, `it.po`). The "Authentication failed" and missing-key errors now also link to Supertext account signup and API key generation.
 - Settings → Supertext shows the installed module version, linked to its GitHub release notes.
 - Support: the Supertext support form is linked in the README, the user guide and GitHub's "New issue" page.
+- Demo movie in the README (`docs/images/demo.gif`): an editor translates an article into German with *Translate with Supertext* and opens the German draft. Recorded by `Tests/Docs/movie.mjs` against the demo and the stand-in API; the MP4 version has an English voice (Piper voice “alba”, CC BY 4.0). Install and configuration movie (MP4, not committed): `Tests/Docs/movie-install.mjs` shows an administrator installing the package, enabling the feature and setting the API key and the language mapping.
 
 ### Changed
 

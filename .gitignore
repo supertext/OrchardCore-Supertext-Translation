@@ -6,3 +6,5 @@ node_modules/
 .vs/
 .idea/
 TestResults/
+/Tests/Docs/movie/out/
+/Tests/Docs/movie/voice-cache/

@@ -2,6 +2,8 @@
 
 Translate Orchard Core content items into other cultures with [Supertext](https://www.supertext.com) AI translation.
 
+![An editor opens an English article in Orchard Core, clicks Translate with Supertext, ticks German (Switzerland) and opens the German draft](docs/images/demo.gif)
+
 - **Translate with Supertext**: a button in the content list and the editor translates an item into the cultures you pick. Missing translations are created, existing ones are overwritten after you confirm. Every result is saved as a draft to review.
 - **Export for translation / Import translation**: download an item's texts as an XLIFF 1.2 or HTML file for a translator, a translation tool or Supertext's web app, and import the translated file as drafts.
 - **Automatic**: when you create a culture version with Orchard Core's own *Localizations* menu, the copy is translated before the editor opens it.

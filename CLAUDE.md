@@ -97,3 +97,4 @@ Lessons from testing against the live API (October 2026), to apply in every plug
 - Orchard user names can't contain `@`: the demo uses the e-mail's local part as user name (entrypoint and `DemoSetupEvents.UserNameFor`); people sign in with the e-mail.
 - If a Razor view fails to compile with nonsense positions after edits, `dotnet build-server shutdown` and delete `obj/`.
 - Test against the local stand-in (`Tests/Docs/stand-in.mjs`, `STAND_IN_PREFIX=1` marks untranslated text) before the live API.
+- Docs screenshots: `Tests/Docs/screenshots.mjs` (`npm run screenshots`). Demo movie (`docs/images/demo.gif` in the README): `Tests/Docs/movie.mjs` (`npm run movie`); install and configuration movie (MP4 only, not committed): `Tests/Docs/movie-install.mjs` (`npm run movie:install`). See `docs/DEVELOPER.md` → *Demo movie*; re-record them when the translate page, Settings → Supertext or the installation steps change.
