@@ -37,6 +37,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--
+      Patched versions of packages Orchard Core 3.0.1 pulls in with known vulnerabilities (only raises the lower
+      bound; Orchard Core itself accepts these versions). Remove once Orchard Core requires them itself.
+    -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
+    <PackageReference Include="MySqlConnector" Version="2.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The Supertext SDK, bundled (namespace Supertext.OrchardCore.Translation.Sdk and .Sdk.V1): see lib/supertext-sdk/README.md -->
     <Compile Include="../../lib/supertext-sdk/src/**/*.cs" Link="Sdk/%(RecursiveDir)%(Filename)%(Extension)" />
     <!-- Supertext Plugin Health, bundled (namespace Supertext.OrchardCore.Translation.PluginHealth): see lib/supertext-plugin-health/README.md -->

@@ -11,6 +11,11 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Application.Cms.Targets" Version="3.0.1" />
+    <!--
+      Patched version of a package Orchard Core 3.0.1 pulls in with a known vulnerability. SixLabors.ImageSharp
+      stays at Orchard Core's 3.1.x: the patched 3.2.0 and 4.x need a Six Labors license key to build.
+    -->
+    <PackageReference Include="AngleSharp" Version="1.10.1" />
   </ItemGroup>
 
   <ItemGroup>

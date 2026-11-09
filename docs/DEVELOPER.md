@@ -261,6 +261,8 @@ Dependabot (`.github/dependabot.yml`) opens weekly pull requests: minor and patc
 
 `.github/workflows/dependabot-merge.yml` merges a minor or patch package update by itself once every other check on its pull request has passed (it waits up to 85 minutes and leaves the pull request alone if a check fails). GitHub Actions updates and majors stay for a person: the workflow's built-in token can't merge changes to workflow files, and a major needs a decision. Merges by the workflow don't start CI on `main`; the weekly health check looks at `main`.
 
+Security floors: Orchard Core 3.0.1 pulls in some packages in versions with known vulnerabilities, so the module references patched versions directly (`System.Security.Cryptography.Pkcs`, `MySqlConnector`) and the demo `AngleSharp`. Remove these references once Orchard Core requires those versions itself (`dotnet list <project> package --vulnerable --include-transitive`). `SixLabors.ImageSharp` (from OrchardCore.Media) stays at 3.1.x: the patched 3.2.0 and 4.x fail to build without a Six Labors license key, so its advisories remain until Orchard Core moves on.
+
 ## Releasing
 
 Releases are published by `.github/workflows/release.yml` when the version is officially bumped; nobody tags or creates releases by hand.

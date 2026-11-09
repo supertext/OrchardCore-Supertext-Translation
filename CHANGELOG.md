@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## Unreleased
 
+### Security
+
+- The package now requires System.Security.Cryptography.Pkcs 10.0.14 and MySqlConnector 2.6.2: Orchard Core 3.0.1 pulls in older versions with known vulnerabilities (.NET denial of service, MySQL password disclosure). The demo also uses AngleSharp 1.10.1. SixLabors.ImageSharp stays at Orchard Core's 3.1.x (its patched versions need a Six Labors license key).
+
 ### Changed
 
 - **Supertext SDK 0.4.0: default languages.** A culture you haven't mapped now uses its obvious Supertext language instead of failing: `de` → `de-DE`, `en` → `en-US`, `fr` → `fr-FR`, `it` → `it-IT`, `pt` → `pt-PT`, `zh` → `zh-Hans`, `zh-TW` → `zh-Hant`, `es-ES` → `es`, `nl-NL` → `nl`. The **Language mapping** selects on Settings → Supertext are pre-selected with that default (*Suggested by Supertext*); only cultures without one (`en-IE`, `de-LI`, `gsw` …) show *— choose —* and *Not mapped*. Language names in the selects follow the back-end language. Saved codes Supertext doesn't accept are updated where the replacement is obvious (`es-ES` → `es`); other saved values are kept. Only Supertext's codes can be saved.
