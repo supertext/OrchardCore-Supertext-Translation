@@ -168,9 +168,34 @@ dotnet test tests/Supertext.OrchardCore.Translation.Tests   # SDK wrapper agains
 - `SupertextClientTests`: the SDK wrapper against a fake API (segments in one document, Liquid kept, key prefix, error templates); Translation review: a review culture's upload, status, download and delete all go to the review URL with the same key and a User-Agent with the module's version, other cultures go directly, an empty review URL or the API's own URL turns it off, the default is Supertext's review service, `SUPERTEXT_REVIEW_URL=` (empty) wins over the configuration, the per-culture setting and how saving merges it.
 - `VersionReportsTests` (fake HTTP, never the live API or center): the setting and `SUPERTEXT_VERSION_REPORTS`, site URL, ping answers (200/400/404), one `installed` report with the right fields and without the key, nothing on an unchanged request, `upgraded`, `settings_saved`, a 401/403 reported once, nothing sent with reports off, no exception when the network fails, state stored in a site entity.
 
-CI (`.github/workflows/ci.yml`) builds the module and the demo, runs the tests, checks the demo entrypoint and the Node scripts' syntax.
+CI (`.github/workflows/ci.yml`) builds the module and the demo, runs the tests, checks the demo entrypoint and the Node scripts' syntax. `.github/workflows/e2e.yml` runs the end-to-end test against the real Supertext API and regenerates the docs screenshots (see *End-to-end tests*).
 
 End to end (manual, before a release): fresh demo with the stand-in (`STAND_IN_PREFIX=1`) and `SUPERTEXT_REPORT_URL=http://127.0.0.1:8765/report` (`REPORT_LOG=reports.jsonl` on the stand-in records the reports), check `GET /supertext/ping?challenge=abcdefghijklmnop` (200 with the challenge) and the `installed` report after saving Settings → Supertext, sign in as the editor, translate *Translating with Supertext* into all three languages (all texts carry the marker, the link URL doesn't), translate German again (overwrite warning), publish German and open its URL; create the German version of *About this demo* from the *Localizations* menu (the Flow widgets are translated); export the article for translation as XLIFF and HTML and import the HTML file again (summary, German draft). `Tests/Docs/screenshots.mjs` runs most of this, including an HTML export → import round trip.
+
+Manual check (before a release): fresh demo with the stand-in (`STAND_IN_PREFIX=1`) and `SUPERTEXT_REPORT_URL=http://127.0.0.1:8765/report` (`REPORT_LOG=reports.jsonl` on the stand-in records the reports), check `GET /supertext/ping?challenge=abcdefghijklmnop` (200 with the challenge) and the `installed` report after saving Settings → Supertext, sign in as the editor, translate *Translating with Supertext* into all three languages (all texts carry the marker, the link URL doesn't), translate German again (overwrite warning), publish German and open its URL; create the German version of *About this demo* from the *Localizations* menu (the Flow widgets are translated). `Tests/Docs/screenshots.mjs` runs most of this.
+
+## End-to-end tests
+
+The unit tests use fakes. `.github/workflows/e2e.yml` also tests against the **real Supertext API**, so changes on Supertext's side (language codes, regional variants, formatting, rate limits) show up. It runs on every push to `main` that touches the module (`src/`, `lib/`), the demo or `Tests/`, on pull requests that change the E2E test or workflow, every Monday (05:39 UTC), and by hand (*Actions → E2E → Run workflow*). It builds the demo image once (Docker layer cache in GitHub Actions) and starts it twice, each with a fresh `App_Data` and demo accounts made up for the run:
+
+1. **Real API** (repository or organization secret `SUPERTEXT_API_KEY`, set by Remy; without it these steps are skipped with a warning). Version reports are off (`SUPERTEXT_VERSION_REPORTS=0`), so CI runs don't appear in the Commando Center. `/data` is a folder on the runner, so the test can read the SQLite database.
+   - `Tests/E2E/features.mjs` asks the live `GET features` (cost-free, no module or SDK code) whether every pair the demo translates (`en` → `de-CH`, `fr-CH`, `it-CH`) is offered; a missing pair fails the run. Whether the module's own language list matches the API is the SDK's job (its own tests).
+   - `Tests/E2E/live.mjs` (Playwright, as the `DEMO_EDITOR_*` account, through Orchard Core's admin): the editor first creates one more English article whose HTML body contains Liquid (`{{ Site.SiteName }}`, `{% if … %}…{% endif %}`), because the demo's sample content has none. Then every English item (*Translating with Supertext*, *About this demo* with its Flow widgets, the Liquid article) is translated into every culture with the editor's **Translate with Supertext** button. The database (YesSql's `ContentItemIndex` and `Document`) is checked: every item has exactly one localization per culture, none of them is published, every text field the module translates is filled and at least 80 % of them changed (a single word can stay the same), no `data-st-id`/`data-st-keep`/placeholder is left, links, bold, italics, list items, headings and Liquid tags are kept (Liquid exactly), the text is in the target language (common words of each language counted) and de-CH has no "ß". The page shows one success message per culture and no warning ("kept the source wording") or error. Translating again (overwrite confirmed) must update the same localizations, not create new ones, and publish nothing. Each run translates three items twice into three languages (a few thousand characters on the key's account).
+2. **Stand-in API**: the docs screenshots (see *Docs screenshots*), so the images don't change with each machine translation. If `docs/images/` changed, a second job pushes the branch `automation/docs-screenshots` and opens (or updates) the pull request "Docs: regenerate screenshots". This needs *Settings → Actions → General → Allow GitHub Actions to create and approve pull requests*.
+
+If a run fails, the artifact `e2e-debug` has the result pages (`Tests/E2E/artifacts/`), the demo logs and the stand-in log. Locally (Node 22.13 or later, for `node:sqlite`):
+
+```bash
+cd Tests/E2E && npm install && npx playwright install chromium
+# fresh demo with a real SUPERTEXT_API_KEY and its /data (App_Data) on this machine, e.g. on port 8081:
+#   docker run -d --network host -v "$PWD/demo-data:/data" -e PORT=8081 -e SUPERTEXT_API_KEY -e SUPERTEXT_VERSION_REPORTS=0 \
+#     -e DEMO_ADMIN_EMAIL -e DEMO_ADMIN_PASSWORD -e DEMO_EDITOR_EMAIL -e DEMO_EDITOR_PASSWORD supertext-orchardcore-demo
+#   sudo chmod -R a+rwX demo-data   # the container writes as root
+SUPERTEXT_API_KEY=… E2E_TARGETS=de-CH,fr-CH,it-CH node features.mjs
+ORCHARD_URL=http://127.0.0.1:8081 ORCHARD_DATA="$PWD/demo-data" EDITOR_EMAIL=… EDITOR_PASSWORD=… npm run live
+```
+
+To try changes to the test without a key, run it against a demo that talks to the stand-in (`SUPERTEXT_API_KEY=stand-in`, `SUPERTEXT_API_ENDPOINT=http://127.0.0.1:8765/v1/`): the flow and the structural checks run, but the stand-in only knows German for the sample texts, so the translation and language checks fail for the other texts and cultures. Sessions never use a live key.
 
 ## Docs screenshots
 
@@ -183,6 +208,8 @@ cd Tests/Docs && npm install && npx playwright install chromium && node stand-in
 # start the demo fresh (see Local development, minus SUPERTEXT_API_KEY), then:
 BASE_URL=http://127.0.0.1:8096 DEMO_ADMIN_EMAIL=… DEMO_ADMIN_PASSWORD=… DEMO_EDITOR_EMAIL=… DEMO_EDITOR_PASSWORD=… npm run screenshots
 ```
+
+The script shows fixed values for server-rendered times ("1 minute ago" in the content list, the key check's date), shows every toast of the page and turns off transitions and the text caret, so the images only change when the UI does (two runs give identical files). In CI, the E2E workflow takes the screenshots on every run and opens a pull request when they differ (see *End-to-end tests*).
 
 New texts in the flow: run the stand-in with `STAND_IN_DUMP=<dir>` and translate what it writes to `<dir>/de-CH.json` into `sample-de.json`. `CHROMIUM_PATH` points Playwright at an installed Chromium.
 

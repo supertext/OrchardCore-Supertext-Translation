@@ -38,8 +38,27 @@ async function session(email, password) {
   return page;
 }
 
+// Server-rendered times ("49 seconds ago", the key check's date) and timing (toasts that hide
+// after a few seconds, transitions, the blinking caret) would change the images on every run:
+// show fixed values and every toast of the page, so the images only change when the UI does.
+const freezeTimes = (page) => page.evaluate(() => {
+  if (!document.getElementById('screenshot-freeze')) {
+    const style = document.createElement('style');
+    style.id = 'screenshot-freeze';
+    style.textContent = '*, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; }';
+    document.head.append(style);
+  }
+  document.querySelectorAll('.toast').forEach((t) => { t.classList.remove('hide', 'showing'); t.classList.add('show'); });
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    node.nodeValue = node.nodeValue.replace(/\b(\d+|a few|an?) (second|minute|hour)s? ago\b/g, '1 minute ago');
+  }
+  document.querySelectorAll('.supertext-key-check .small').forEach((e) => { e.textContent = 'checked 10/14/2026 5:56 AM'; });
+});
+
 const shot = async (page, file, locator, { pad = 8, maxHeight } = {}) => {
   await page.waitForTimeout(400); // toasts fade in
+  await freezeTimes(page);
   const box = await page.locator(locator).first().boundingBox();
   // Start below the admin's fixed top bar.
   const top = Math.max(56, box.y - pad);
@@ -113,12 +132,14 @@ await shot(page, 'overwrite-warning.png', '.ta-content', { maxHeight: 520 });
 await page.goto(`${base}/Admin/Contents/ContentItems`);
 const aboutRow = page.locator('li.list-group-item', { hasText: 'About this demo' });
 await aboutRow.locator('button.localizations').click();
-await page.waitForTimeout(300);
+await page.waitForTimeout(1000); // let the menu and the button focus ring settle
+await freezeTimes(page);
 const rowBox = await aboutRow.boundingBox();
 const menuBox = await aboutRow.locator('.dropdown-menu.show').boundingBox();
 await page.screenshot({ path: out + 'localizations-menu.png', clip: { x: rowBox.x, y: rowBox.y - 8, width: rowBox.width, height: menuBox.y + menuBox.height - rowBox.y + 16 } });
 console.log('wrote localizations-menu.png');
-await aboutRow.locator('.dropdown-menu.show a[title="Create German (Switzerland)"]').click();
+// The menu opens over the admin's left sidebar, which would take a real click: click the link in the page.
+await aboutRow.locator('.dropdown-menu.show a[title="Create German (Switzerland)"]').evaluate((a) => a.click());
 await page.waitForLoadState('networkidle');
 await page.setViewportSize({ width: 1280, height: 900 });
 await shot(page, 'localize-translated.png', '.ta-content', { maxHeight: 620 });

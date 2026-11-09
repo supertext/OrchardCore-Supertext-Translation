@@ -35,3 +35,5 @@ jobs:
           sh -n demo/entrypoint.sh
           node --check Tests/Docs/stand-in.mjs
           node --check Tests/Docs/screenshots.mjs
+          node --check Tests/E2E/features.mjs
+          node --check Tests/E2E/live.mjs
