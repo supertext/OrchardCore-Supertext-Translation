@@ -100,7 +100,8 @@ public class ContentWalkerTests
         var settings = new SupertextSettings { LanguageMapping = "de = de-CH\nfr=fr-FR\n", ExcludedFields = "A.B, C\n D " };
         Assert.Equal("de-CH", SupertextConfiguration.TargetLanguageCode(settings, "DE"));
         Assert.Equal("it-CH", SupertextConfiguration.TargetLanguageCode(settings, "it-CH"));
-        Assert.Throws<SupertextException>(() => SupertextConfiguration.TargetLanguageCode(settings, "it")); // no default region
+        Assert.Equal("it-IT", SupertextConfiguration.TargetLanguageCode(settings, "it")); // the SDK's default target
+        Assert.Throws<SupertextException>(() => SupertextConfiguration.TargetLanguageCode(settings, "en-IE")); // no obvious default
         Assert.Equal("en", SupertextConfiguration.SourceLanguageCode(settings, "en-US"));
         Assert.Equal("de", SupertextConfiguration.SourceLanguageCode(settings, "de"));
         Assert.Equal(["A.B", "C", "D"], SupertextConfiguration.ExcludedFields(settings));

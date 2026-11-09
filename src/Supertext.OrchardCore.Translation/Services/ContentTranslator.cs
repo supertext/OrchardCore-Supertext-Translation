@@ -52,21 +52,16 @@ public sealed class ContentTranslator(
             throw new SupertextException("No Supertext API key configured. An administrator can add it under Settings → Supertext.");
         }
 
-        var data = (JsonObject)Data(source).DeepClone();
-        foreach (var owned in TargetOwnedParts)
-        {
-            data.Remove(owned);
-        }
-
-        var walker = new ContentWalker(ResolveTypeAsync, SupertextConfiguration.ExcludedFields(settings));
-        var segments = await walker.CollectAsync(data, source.ContentType);
+        var (data, segments) = await CollectAsync(source, settings);
         var untranslated = 0;
         var targetCode = SupertextConfiguration.TargetLanguageCode(settings, targetCulture);
         var sourceCode = SupertextConfiguration.SourceLanguageCode(settings, sourceCulture);
 
         var politeness = LanguageMapping.PolitenessFor(targetCode, settings.Politeness);
 
-        var translations = await client.TranslateSegmentsAsync(connection, segments.Select(s => s.Segment).ToList(), targetCode, sourceCode, politeness, ct);
+        // Cultures with Translation review on go through Supertext's review service (same key and protocol).
+        var targetConnection = connection.ForReview(SupertextConfiguration.ReviewFor(settings, targetCulture));
+        var translations = await client.TranslateSegmentsAsync(targetConnection, segments.Select(s => s.Segment).ToList(), targetCode, sourceCode, politeness, ct);
         for (var i = 0; i < segments.Count; i++)
         {
             if (translations.TryGetValue(i, out var text) && !string.IsNullOrWhiteSpace(text))
@@ -81,6 +76,27 @@ public sealed class ContentTranslator(
         }
 
         return new PreparedTranslation(data, new TranslationResult(segments.Count, untranslated));
+    }
+
+    /// <summary>
+    /// A copy of the source's content without the parts that belong to a target item, and its
+    /// translatable texts (keyed by <see cref="PendingSegment.Path"/>). Applying texts to the
+    /// segments changes the copy, which <see cref="Apply"/> then writes to a target. Used by the
+    /// API translation and by translation files (export and import), so both see the same texts.
+    /// </summary>
+    public async Task<(JsonObject Data, List<PendingSegment> Segments)> CollectAsync(ContentItem source)
+        => await CollectAsync(source, await configuration.GetSettingsAsync());
+
+    private async Task<(JsonObject Data, List<PendingSegment> Segments)> CollectAsync(ContentItem source, Settings.SupertextSettings settings)
+    {
+        var data = (JsonObject)Data(source).DeepClone();
+        foreach (var owned in TargetOwnedParts)
+        {
+            data.Remove(owned);
+        }
+
+        var walker = new ContentWalker(ResolveTypeAsync, SupertextConfiguration.ExcludedFields(settings));
+        return (data, await walker.CollectAsync(data, source.ContentType));
     }
 
     /// <summary>Copies translated content over the target, keeping the target's own parts.</summary>

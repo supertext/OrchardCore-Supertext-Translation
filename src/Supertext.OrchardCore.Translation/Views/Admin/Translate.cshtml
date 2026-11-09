@@ -85,3 +85,112 @@
         <a class="btn btn-secondary" asp-route="EditContentItem" asp-route-contentItemId="@Model.ContentItemId">@T["Back to the item"]</a>
     }
 </form>
+
+@if (Model.Targets.Count > 0)
+{
+    <hr class="my-4" />
+
+    <section class="supertext-export mb-4">
+        <h2 class="h4">@T["Export for translation"]</h2>
+        <p class="text-muted">@T["Download the texts of this item as a file for a translator or a translation tool, or upload it to Supertext's web app. Import the translated file below."]</p>
+        <form asp-route="Supertext.Export" asp-route-contentItemId="@Model.ContentItemId" method="post">
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <fieldset class="mb-3">
+                <legend class="form-label fs-6">@T["File format"]</legend>
+                <div class="form-check">
+                    <input type="radio" class="form-check-input" name="format" value="xliff" id="format-xliff" checked="@(Model.ExportFormat != "html")" />
+                    <label class="form-check-label" for="format-xliff">@T["XLIFF 1.2 (for translation tools)"]</label>
+                </div>
+                <div class="form-check">
+                    <input type="radio" class="form-check-input" name="format" value="html" id="format-html" checked="@(Model.ExportFormat == "html")" />
+                    <label class="form-check-label" for="format-html">@T["HTML (one language per file)"]</label>
+                </div>
+            </fieldset>
+            <fieldset class="mb-3">
+                <legend class="form-label fs-6">@T["Target languages"]</legend>
+                @foreach (var target in Model.Targets)
+                {
+                    var id = "export-" + target.Culture;
+                    <div class="form-check form-check-inline">
+                        <input type="checkbox" class="form-check-input" name="exportCultures" value="@target.Culture" id="@id" checked="@Model.ExportCultures.Contains(target.Culture, StringComparer.OrdinalIgnoreCase)" />
+                        <label class="form-check-label" for="@id">@target.CultureName <span class="text-muted">(@target.Culture)</span></label>
+                    </div>
+                }
+            </fieldset>
+            <button type="submit" class="btn btn-outline-primary supertext-export-submit"><i class="fa-solid fa-download" aria-hidden="true"></i> @T["Download file"]</button>
+        </form>
+    </section>
+
+    <section class="supertext-import">
+        <h2 class="h4">@T["Import translation"]</h2>
+        <p class="text-muted">@T["Imported texts are saved as drafts of the localizations, like translations with Supertext. Review and publish them when they're ready."]</p>
+        <form asp-route="Supertext.Import" asp-route-contentItemId="@Model.ContentItemId" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+            <div class="mb-3">
+                <label class="form-label" for="supertext-file">@T["Translated file (XLIFF or HTML)"]</label>
+                <input type="file" class="form-control" name="file" id="supertext-file" accept=".xlf,.xliff,.html,.htm" />
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" name="includeChanged" value="true" id="includeChanged" checked="@Model.IncludeChanged" />
+                <label class="form-check-label" for="includeChanged">@T["Also import texts whose source changed since the export"]</label>
+            </div>
+            <div class="form-check mb-3">
+                <input type="checkbox" class="form-check-input" name="confirmOverwrite" value="true" id="importConfirmOverwrite" />
+                <label class="form-check-label" for="importConfirmOverwrite">@T["Yes, overwrite the existing translations"]</label>
+            </div>
+            <button type="submit" class="btn btn-outline-primary supertext-import-submit"><i class="fa-solid fa-upload" aria-hidden="true"></i> @T["Import translation"]</button>
+        </form>
+
+        @if (Model.ImportError is not null)
+        {
+            <div class="alert alert-danger mt-3 supertext-import-error">@Model.ImportError</div>
+        }
+        @if (Model.ImportResults is not null)
+        {
+            <div class="mt-3 supertext-import-summary">
+                @foreach (var result in Model.ImportResults)
+                {
+                    <div class="card mb-2">
+                        <div class="card-body py-2">
+                            <p class="mb-1"><strong>@result.Title</strong> <span class="text-muted">· @result.CultureName (@result.Culture)</span></p>
+                            @if (result.Error is not null)
+                            {
+                                <p class="text-danger mb-0">@result.Error</p>
+                            }
+                            else if (result.Counts is not null)
+                            {
+                                <ul class="list-unstyled mb-1">
+                                    <li>@T["Imported: {0}", result.Counts.Imported]</li>
+                                    @if (result.Counts.SourceChanged > 0)
+                                    {
+                                        <li>@T["Skipped, source changed since the export: {0}", result.Counts.SourceChanged]</li>
+                                    }
+                                    @if (result.Counts.Untranslated > 0)
+                                    {
+                                        <li>@T["Not translated in the file: {0}", result.Counts.Untranslated]</li>
+                                    }
+                                    @if (result.Counts.InvalidMarkup > 0)
+                                    {
+                                        <li>@T["Formatting changed, not imported: {0}", result.Counts.InvalidMarkup]</li>
+                                    }
+                                    @if (result.Counts.Missing > 0)
+                                    {
+                                        <li>@T["Not in the file: {0}", result.Counts.Missing]</li>
+                                    }
+                                </ul>
+                                @if (result.SavedContentItemId is not null)
+                                {
+                                    <a asp-route="EditContentItem" asp-route-contentItemId="@result.SavedContentItemId">@T["Saved as a draft. Open it to review."]</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">@T["Nothing was imported."]</span>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+}

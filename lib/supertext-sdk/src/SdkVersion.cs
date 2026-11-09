@@ -7,5 +7,5 @@ namespace Supertext.OrchardCore.Translation.Sdk;
 public static class SdkInfo
 {
     /// <summary>This SDK's version (plugins pass it to Supertext Plugin Health as <c>sdkVersion</c>). Same number as <c>&lt;Version&gt;</c> in Supertext.OrchardCore.Translation.Sdk.csproj and CHANGELOG.md.</summary>
-    public const string Version = "0.3.0";
+    public const string Version = "0.5.0";
 }

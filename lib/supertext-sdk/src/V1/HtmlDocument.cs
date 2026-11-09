@@ -45,6 +45,20 @@ public static partial class HtmlDocument
     public static IReadOnlyList<string?> Parse(string html, IReadOnlyList<Segment> segments)
     {
         var result = new string?[segments.Count];
+        foreach (var (id, text) in ParseSparse(html, segments.Count, id => segments[id].Html))
+        {
+            result[id] = text;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// <see cref="Parse"/> for <paramref name="count"/> segments without allocating one entry per segment:
+    /// only the ids found are in the result.
+    /// </summary>
+    internal static Dictionary<int, string> ParseSparse(string html, int count, Func<int, bool> isHtml)
+    {
+        var result = new Dictionary<int, string>();
         var position = 0;
         while (position < html.Length)
         {
@@ -65,10 +79,10 @@ public static partial class HtmlDocument
                 : start.Groups[3].Success ? start.Groups[3].Value : start.Groups[4].Value;
             // Ids out of range (or too long to be an int) and repeated ids are ignored; the first wins.
             if (int.TryParse(idText, NumberStyles.None, CultureInfo.InvariantCulture, out var id)
-                && id < segments.Count && result[id] is null)
+                && id < count && !result.ContainsKey(id))
             {
                 var inner = html[contentStart..end];
-                result[id] = segments[id].Html ? TrimAscii(inner) : PlainText(inner);
+                result[id] = isHtml(id) ? TrimAscii(inner) : PlainText(inner);
             }
             position = after;
         }
@@ -128,15 +142,18 @@ public static partial class HtmlDocument
     private static string TrimAscii(string s) => s.Trim(' ', '\t', '\n', '\r', '\f');
 
     /// <summary>Plain text of a translated segment: tags removed, whitespace collapsed, entities decoded.</summary>
-    private static string PlainText(string inner)
+    internal static string PlainText(string inner)
     {
         var text = LineBreakTag().Replace(inner, "\u001e");
         text = AnyTag().Replace(text, string.Empty);
         text = AsciiWhitespace().Replace(text, " ");
         text = Marker().Replace(text, "\n");
         text = text.Trim(' ');
-        return Entity().Replace(text, DecodeEntity);
+        return DecodeEntities(text);
     }
+
+    /// <summary>Decodes the entities Supertext writes (numeric, amp, lt, gt, quot, apos, nbsp); others stay as they are.</summary>
+    internal static string DecodeEntities(string text) => Entity().Replace(text, DecodeEntity);
 
     private static string DecodeEntity(Match m)
     {

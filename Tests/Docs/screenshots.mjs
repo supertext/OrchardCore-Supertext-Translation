@@ -14,7 +14,8 @@
  * settings never sends a version report to the live Supertext Commando Center.
  */
 import { chromium } from 'playwright';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 
 const base = (process.env.BASE_URL || 'http://127.0.0.1:8096').replace(/\/$/, '');
 const out = new URL('../../docs/images/', import.meta.url).pathname;
@@ -142,5 +143,28 @@ await aboutRow.locator('.dropdown-menu.show a[title="Create German (Switzerland)
 await page.waitForLoadState('networkidle');
 await page.setViewportSize({ width: 1280, height: 900 });
 await shot(page, 'localize-translated.png', '.ta-content', { maxHeight: 620 });
+
+// Export for translation and import of the translated file (same page)
+await page.goto(translateUrl);
+await page.setViewportSize({ width: 1280, height: 1400 });
+await page.check('#format-html');
+await page.check('input[name="exportCultures"][value="de-CH"]');
+await shot(page, 'export-for-translation.png', 'section.supertext-export');
+const [download] = await Promise.all([page.waitForEvent('download'), page.click('button.supertext-export-submit')]);
+const exported = readFileSync(await download.path(), 'utf8');
+// Translate the file like a translator would, with the stand-in's real German.
+const escape = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+let translated = exported;
+for (const [en, de] of Object.entries(JSON.parse(readFileSync(new URL('sample-de.json', import.meta.url), 'utf8')))) {
+  translated = translated.split(`>${en}</div>`).join(`>${de}</div>`).split(`>${escape(en)}</div>`).join(`>${escape(de)}</div>`);
+}
+const upload = `${tmpdir()}/${download.suggestedFilename()}`;
+writeFileSync(upload, translated);
+await page.setInputFiles('#supertext-file', upload);
+await page.check('#importConfirmOverwrite');
+await page.click('button.supertext-import-submit');
+await page.waitForLoadState('networkidle');
+await closeToasts(page);
+await shot(page, 'import-summary.png', 'section.supertext-import');
 
 await browser.close();

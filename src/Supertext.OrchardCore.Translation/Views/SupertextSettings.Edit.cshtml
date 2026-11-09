@@ -81,7 +81,7 @@
 
 <div class="mb-3 supertext-language-mapping">
     <span class="form-label d-block">@T["Language mapping"]</span>
-    <span class="hint d-block mb-2">@T["The Supertext language each culture is translated into (and from). Cultures whose name is a Supertext code (de-CH, fr-CH, es …) are pre-selected; others, such as de or en, need a choice, because Supertext needs to know the region."]</span>
+    <span class="hint d-block mb-2">@T["The Supertext language each culture is translated into (and from). Each culture is pre-selected with its Supertext code (de-CH, es …) or the usual default (de → de-DE, en → en-US, fr → fr-FR, it → it-IT, pt → pt-PT, zh → zh-Hans); pick another one to change it. Cultures without an obvious Supertext language (en-IE, de-LI …) need a choice."]</span>
     @if (Model.Mappings.Any(m => string.IsNullOrEmpty(m.Code)))
     {
         <div class="alert alert-warning py-2 supertext-unmapped">@T["Some cultures have no Supertext language yet. Content can't be translated into or from them until you choose one."]</div>
@@ -91,6 +91,10 @@
             <tr>
                 <th>@T["Culture"]</th>
                 <th>@T["Supertext language"]</th>
+                @if (Model.ReviewAvailable)
+                {
+                    <th>@T["Translation review"]</th>
+                }
             </tr>
         </thead>
         <tbody>
@@ -105,7 +109,10 @@
                     </td>
                     <td>
                         <select asp-for="Mappings[i].Code" class="form-select form-select-sm">
-                            <option value="">@T["Not mapped"]</option>
+                            @if (string.IsNullOrEmpty(row.Code))
+                            {
+                                <option value="" selected>@T["— choose —"]</option>
+                            }
                             @if (!string.IsNullOrEmpty(row.Code) && !known)
                             {
                                 <option value="@row.Code" selected>@row.Code</option>
@@ -115,6 +122,11 @@
                                 <option value="@language.Code" selected="@(language.Code == row.Code)">@language.Name (@language.Code)</option>
                             }
                         </select>
+                        <span asp-validation-for="Mappings[i].Code"></span>
+                        @if (row.Suggested)
+                        {
+                            <span class="d-block small text-muted">@T["Suggested by Supertext."]</span>
+                        }
                         @if (string.IsNullOrEmpty(row.Code))
                         {
                             <span class="d-block small text-danger">@T["Not mapped: this culture can't be translated with Supertext yet."]</span>
@@ -128,10 +140,22 @@
                             <span class="d-block small text-warning-emphasis">@T["Supertext offers no formal/informal choice for this language: it is translated in the default tone."]</span>
                         }
                     </td>
+                    @if (Model.ReviewAvailable)
+                    {
+                        <td>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" asp-for="Mappings[i].Review" aria-label="@T["Translation review"]: @row.CultureName" />
+                            </div>
+                        </td>
+                    }
                 </tr>
             }
         </tbody>
     </table>
+    @if (Model.ReviewAvailable)
+    {
+        <span class="hint d-block mt-2 supertext-review-hint">@T["Translation review: translations into the cultures ticked go through Supertext's review service, so reviewers can check and correct them on the website with the Supertext Localization Review extension. Their corrections are used the next time the content item is translated."]</span>
+    }
 </div>
 
 <div class="mb-3">

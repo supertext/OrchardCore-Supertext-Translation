@@ -17,9 +17,16 @@ public sealed class SupertextSettings
 
     /// <summary>
     /// Language mapping: one "culture=supertext-code" per line, e.g. "de=de-CH". A culture that isn't
-    /// listed is used only if it is a Supertext code itself (de-CH, es); otherwise it can't be translated.
+    /// listed uses its exact Supertext code (de-CH, es), else the SDK default (de → de-DE); otherwise it can't be translated.
     /// </summary>
     public string LanguageMapping { get; set; }
+
+    /// <summary>
+    /// Cultures with <b>Translation review</b> on: translations into them go through Supertext's review
+    /// service (<c>SUPERTEXT_REVIEW_URL</c>, default <see cref="Api.SupertextClient.ReviewUrl"/>). Null or
+    /// empty (older installs) = review off everywhere.
+    /// </summary>
+    public List<string> ReviewCultures { get; set; }
 
     /// <summary>One "Part.Field", "Part" or "ContentType.Part.Field" per line.</summary>
     public string ExcludedFields { get; set; }

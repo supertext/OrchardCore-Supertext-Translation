@@ -6,5 +6,7 @@ node_modules/
 .vs/
 .idea/
 TestResults/
+/Tests/Docs/movie/out/
+/Tests/Docs/movie/voice-cache/
 /Tests/E2E/node_modules/
 /Tests/E2E/artifacts/

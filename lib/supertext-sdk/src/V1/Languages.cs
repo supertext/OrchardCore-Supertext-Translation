@@ -16,9 +16,11 @@ public sealed record TargetLanguage(string Code, string Name, bool Politeness);
 
 /// <summary>
 /// Languages of the Supertext AI file translation API v1 (spec/languages.json, from the live
-/// <c>GET features</c>, October 2026). There is no default region and no guessing: an integration
-/// maps its CMS languages to these codes; a CMS code that equals a Supertext code (apart from case
-/// and <c>_</c>/<c>-</c>) is used as it is, anything else is an
+/// <c>GET features</c>, October 2026). An integration maps its CMS languages to these codes (a combo
+/// box per language, <see cref="SuggestTarget"/> preselected); a CMS code that equals a Supertext code
+/// (apart from case and <c>_</c>/<c>-</c>) is used as it is, a bare language Supertext offers only with
+/// a region or script gets its default (<c>de</c> → <c>de-DE</c>, see <see cref="DefaultTargets"/>), a
+/// region of a bare target is dropped (<c>es-ES</c> → <c>es</c>), anything else is an
 /// <see cref="SupertextErrorCodes.UnsupportedLanguage"/> error until the administrator maps it.
 /// For the live list, use <see cref="SupertextClient.GetFeaturesAsync"/>.
 /// </summary>
@@ -99,8 +101,85 @@ public static class Languages
         new("zh-Hant", "Chinese (Traditional)", true),
     });
 
+    /// <summary>
+    /// The default target of a bare language that Supertext offers only with a region or script.
+    /// Swiss German (<c>gsw</c>) has none: neither dialect is the obvious one.
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> DefaultTargets { get; } =
+        new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(new Dictionary<string, string>
+        {
+            ["de"] = "de-DE",
+            ["en"] = "en-US",
+            ["fr"] = "fr-FR",
+            ["it"] = "it-IT",
+            ["pt"] = "pt-PT",
+            ["sr"] = "sr-Latn",
+            ["zh"] = "zh-Hans",
+        });
+
+    private static readonly Dictionary<string, string> ChineseRegions = new()
+    {
+        ["tw"] = "zh-Hant",
+        ["hk"] = "zh-Hant",
+        ["mo"] = "zh-Hant",
+        ["cn"] = "zh-Hans",
+        ["sg"] = "zh-Hans",
+    };
+
     private static readonly Dictionary<string, SourceLanguage> SourcesByKey = Sources.ToDictionary(l => Key(l.Code));
     private static readonly Dictionary<string, TargetLanguage> TargetsByKey = Targets.ToDictionary(l => Key(l.Code));
+    private static readonly IReadOnlyList<TargetLanguage> Options =
+        Array.AsReadOnly(Targets.OrderBy(l => l.Name, StringComparer.Ordinal).ToArray());
+
+    /// <summary>
+    /// The default target for a CMS code that has no exact match, else null: a bare language's
+    /// <see cref="DefaultTargets"/> entry (<c>de</c> → <c>de-DE</c>), Chinese regions (<c>zh-TW</c> →
+    /// <c>zh-Hant</c>, <c>zh-CN</c> → <c>zh-Hans</c>), <c>language-Script-REGION</c> (<c>sr-Latn-RS</c> →
+    /// <c>sr-Latn</c>) and <c>language-REGION</c> of a bare target (<c>es-ES</c> → <c>es</c>). Never a
+    /// guessed region: <c>en-IE</c>, <c>de-LI</c> → null.
+    /// </summary>
+    public static string? DefaultTarget(string? code)
+    {
+        var key = Key(code);
+        if (key.Length == 0 || TargetsByKey.ContainsKey(key))
+        {
+            return null;
+        }
+        var parts = key.Split('-');
+        var lang = parts[0];
+        if (parts.Length == 1)
+        {
+            return DefaultTargets.TryGetValue(lang, out var fallback) ? fallback : null;
+        }
+        if (parts.Length == 2 && lang == "zh")
+        {
+            return ChineseRegions.TryGetValue(parts[1], out var chinese) ? chinese : null;
+        }
+        if (parts.Length == 3 && IsScript(parts[1]) && IsRegion(parts[2]))
+        {
+            return MatchTarget(lang + "-" + parts[1]);
+        }
+        if (parts.Length == 2 && IsRegion(parts[1]))
+        {
+            return MatchTarget(lang);
+        }
+        return null;
+    }
+
+    /// <summary>What a settings screen preselects for a CMS language: the exact match, else the default, else null.</summary>
+    public static string? SuggestTarget(string? code) => MatchTarget(code) ?? DefaultTarget(code);
+
+    /// <summary>
+    /// The targets sorted by English name, for the language combo box. Show the name localized where the
+    /// platform can (e.g. <see cref="System.Globalization.CultureInfo.DisplayName"/>) and the code next to it.
+    /// </summary>
+    public static IReadOnlyList<TargetLanguage> TargetOptions() => Options;
+
+    private static bool IsScript(string subtag) => subtag.Length == 4 && subtag.All(c => c is >= 'a' and <= 'z');
+
+    private static bool IsRegion(string subtag) =>
+        (subtag.Length == 2 && subtag.All(c => c is >= 'a' and <= 'z')) ||
+        (subtag.Length == 3 && subtag.All(c => c is >= '0' and <= '9'));
 
     /// <summary>Case, <c>_</c> vs <c>-</c> and surrounding spaces don't matter when comparing codes.</summary>
     private static string Key(string? code) => (code ?? string.Empty).Trim().Replace('_', '-').ToLowerInvariant();
@@ -125,14 +204,14 @@ public static class Languages
 
     /// <summary>
     /// The target code to send: the mapping's value (sent trimmed, even if not in the list), else an
-    /// exact match (<see cref="MatchTarget"/>).
+    /// exact match (<see cref="MatchTarget"/>), else the default (<see cref="DefaultTarget"/>).
     /// </summary>
     /// <param name="code">The CMS language.</param>
     /// <param name="mapping">CMS language → Supertext code, e.g. <c>{ ["de"] = "de-CH", ["no"] = "nb" }</c> (the integration's language setting). Keys are compared like codes.</param>
-    /// <exception cref="SupertextException"><see cref="SupertextErrorCodes.UnsupportedLanguage"/> (with <see cref="SupertextException.TargetLang"/>) when there is neither; nothing is sent.</exception>
+    /// <exception cref="SupertextException"><see cref="SupertextErrorCodes.UnsupportedLanguage"/> (with <see cref="SupertextException.TargetLang"/>) when there is none of them; nothing is sent.</exception>
     public static string Target(string? code, IReadOnlyDictionary<string, string>? mapping = null)
     {
-        var result = Mapped(code, mapping) ?? MatchTarget(code);
+        var result = Mapped(code, mapping) ?? MatchTarget(code) ?? DefaultTarget(code);
         if (result is null)
         {
             var trimmed = (code ?? string.Empty).Trim();

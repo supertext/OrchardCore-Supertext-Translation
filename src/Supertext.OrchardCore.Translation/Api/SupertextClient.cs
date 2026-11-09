@@ -35,7 +35,23 @@ public sealed class SupertextException(string template, object[] args = null, st
 }
 
 /// <summary>Where and how to reach Supertext (resolved from site settings and environment).</summary>
-public sealed record SupertextConnection(string Endpoint, string ApiKey, int PollIntervalSeconds = 2, int PollTimeoutSeconds = 300);
+/// <param name="ReviewUrl">Supertext's review service for cultures with <b>Translation review</b> on; empty = review off everywhere.</param>
+public sealed record SupertextConnection(string Endpoint, string ApiKey, int PollIntervalSeconds = 2, int PollTimeoutSeconds = 300, string ReviewUrl = "")
+{
+    /// <summary>
+    /// The connection for a target culture: with <paramref name="review"/> on, the same key, timeouts and
+    /// HTTP client against the review service (a second SDK client, which also collects the job it
+    /// submitted); else this one. Without a review URL, or when it equals the endpoint, always this one.
+    /// </summary>
+    public SupertextConnection ForReview(bool review)
+    {
+        var reviewUrl = ReviewUrl?.Trim() ?? string.Empty;
+        var endpoint = string.IsNullOrWhiteSpace(Endpoint) ? SupertextClient.DefaultEndpoint : Endpoint.Trim();
+        return !review || reviewUrl == string.Empty || reviewUrl.TrimEnd('/') == endpoint.TrimEnd('/')
+            ? this
+            : this with { Endpoint = reviewUrl, ReviewUrl = string.Empty };
+    }
+}
 
 /// <summary>
 /// Supertext AI file translation (https://api.supertext.com/v1/) through the Supertext SDK
@@ -49,6 +65,16 @@ public sealed record SupertextConnection(string Endpoint, string ApiKey, int Pol
 public sealed partial class SupertextClient(HttpClient http)
 {
     public const string DefaultEndpoint = Sdk.V1.SupertextClient.LiveBaseUrl;
+
+    /// <summary>
+    /// Supertext's review service (translation proxy of Supertext Localization Review). It speaks the
+    /// same API and forwards to the live Supertext API with the site's key, keeping every translation
+    /// so reviewers can correct them on the website. Used for cultures with <b>Translation review</b> on.
+    /// </summary>
+    public const string ReviewUrl = "https://localizationreview-production.up.railway.app/v1/";
+
+    /// <summary>The User-Agent of every request: the module and its version (as in the version reports).</summary>
+    public static string UserAgent => "OrchardCore-Supertext-Translation/" + (string.IsNullOrEmpty(Services.ModuleVersion.Current) ? "0.0.0" : Services.ModuleVersion.Current);
 
     /// <summary>Documents above this size are split into several requests.</summary>
     public const int MaxDocumentCharacters = Sdk.V1.SupertextClient.DefaultMaxCharacters;
@@ -92,7 +118,7 @@ public sealed partial class SupertextClient(HttpClient http)
         => new()
         {
             BaseUrl = string.IsNullOrWhiteSpace(endpoint) ? DefaultEndpoint : endpoint.Trim(),
-            UserAgent = "OrchardCore-Supertext-Translation/" + ModuleVersionText,
+            UserAgent = UserAgent,
         };
 
     /// <summary>Removes a pasted "Supertext-Auth-Key " prefix (Supertext shows the key with it).</summary>
@@ -107,13 +133,10 @@ public sealed partial class SupertextClient(HttpClient http)
             BaseUrl = endpoint,
             PollInterval = TimeSpan.FromSeconds(Math.Max(1, connection.PollIntervalSeconds)),
             Timeout = TimeSpan.FromSeconds(Math.Max(10, connection.PollTimeoutSeconds)),
-            UserAgent = "OrchardCore-Supertext-Translation/" + ModuleVersionText,
+            UserAgent = UserAgent,
             HttpClient = http,
         });
     }
-
-    private static readonly string ModuleVersionText =
-        typeof(SupertextClient).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
 
     private static string NullIfEmpty(string value) => string.IsNullOrWhiteSpace(value) ? null : value;
 
