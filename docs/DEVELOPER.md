@@ -163,6 +163,8 @@ If a Razor view suddenly fails with errors at impossible positions after editing
 dotnet test tests/Supertext.OrchardCore.Translation.Tests   # SDK wrapper against a fake API, HTML packing, Liquid protection, content walker, settings parsing, language mapping, version reports, module version, UI strings in de/fr/it
 ```
 
+The tests use xUnit v3 on Microsoft.Testing.Platform: `global.json` opts `dotnet test` into the platform's runner (the .NET 10 SDK no longer runs Microsoft.Testing.Platform projects through VSTest).
+
 - `LanguageMappingTests`: mapping, exact codes, SDK defaults (`fr` → `fr-FR`, `es-ES` → `es`, `zh-TW` → `zh-Hant`), `unsupported_language` for `en-IE`/`de-LI`/`gsw` without mapping, suggestions for the selects, migration of stored codes, source forms, form of address only where Supertext offers it.
 - `TranslationFileExchangeTests`: reference round trip, export with the collector's keys and the mapping (unmapped cultures fall back to the culture), import of `ok` texts, `source_changed` only with the option, `untranslated`/`invalid_markup`/`missing` not written, other plugin and unknown reference refused, too large uploads refused before reading.
 - `SupertextClientTests`: the SDK wrapper against a fake API (segments in one document, Liquid kept, key prefix, error templates); Translation review: a review culture's upload, status, download and delete all go to the review URL with the same key and a User-Agent with the module's version, other cultures go directly, an empty review URL or the API's own URL turns it off, the default is Supertext's review service, `SUPERTEXT_REVIEW_URL=` (empty) wins over the configuration, the per-culture setting and how saving merges it.

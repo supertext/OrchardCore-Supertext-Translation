@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## Unreleased
 
+- Changed: the package now requires System.Security.Cryptography.Pkcs 10.0.15 or later (was 10.0.14; latest .NET 10 servicing release).
+
 ## 1.0.0 — 2026-11-10
 
 First stable release. Every plugin release is now tested end to end against the live Supertext API (`.github/workflows/e2e.yml`).
