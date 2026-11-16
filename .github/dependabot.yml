@@ -7,6 +7,13 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      # Security floors only (see docs/DEVELOPER.md -> Dependency updates): a new major would force
+      # it on every site instead of only raising the patched lower bound Orchard Core accepts.
+      - dependency-name: "System.Security.Cryptography.Pkcs"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "MySqlConnector"
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
