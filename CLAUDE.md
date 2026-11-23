@@ -100,3 +100,7 @@ Lessons from testing against the live API (October 2026), to apply in every plug
 - Test against the local stand-in (`Tests/Docs/stand-in.mjs`, `STAND_IN_PREFIX=1` marks untranslated text) before the live API.
 - Docs screenshots: `Tests/Docs/screenshots.mjs` (`npm run screenshots`). Demo movie (`docs/images/demo.gif` in the README): `Tests/Docs/movie.mjs` (`npm run movie`); install and configuration movie (MP4 only, not committed): `Tests/Docs/movie-install.mjs` (`npm run movie:install`). See `docs/DEVELOPER.md` → *Demo movie*; re-record them when the translate page, Settings → Supertext or the installation steps change.
 - End-to-end tests against the real Supertext API: `.github/workflows/e2e.yml` with `Tests/E2E/` (see "End-to-end tests" in `docs/DEVELOPER.md`). The key is only the GitHub secret `SUPERTEXT_API_KEY`, set by Remy; sessions don't use a live key. Behaviour changes need matching checks in `Tests/E2E/live.mjs`.
+
+## Live E2E runs share one API key (always)
+
+Every push to `main` that touches the plugin, the demo or the tests starts the live E2E run, and all Supertext plugin repos share one Supertext API key, which is rate-limited per second. When the same kind of change goes to several repos, push them one repo at a time, at least 3 minutes apart (a loop with `sleep 180`), never in parallel. Docs-only changes (`docs/`, `README.md`, `CHANGELOG.md`, `CLAUDE.md`) don't start it and can go together. A live run that failed with `RATE_LIMIT_EXCEEDED` collided with another repo's run, it isn't a bug: rerun it on its own.
