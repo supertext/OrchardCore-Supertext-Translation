@@ -93,7 +93,8 @@ public static class VersionReports
     public static PingResponse Ping(string challenge, bool enabled) => PingResponse.For(challenge, PluginName, enabled);
 
     /// <summary>The Plugin Health reporter for this installation, with the SDK's key check.</summary>
-    public static InstallationReporter CreateReporter(ReportingContext context)
+    /// <param name="languages">The language mapping, for <see cref="SendConfigurationAsync"/> only.</param>
+    public static InstallationReporter CreateReporter(ReportingContext context, IReadOnlyList<PluginHealth.LanguageMapping> languages = null)
     {
         var keyCheckOptions = SupertextClient.KeyCheckOptions(context.Endpoint);
         var clientOptions = new Sdk.V1.SupertextClientOptions
@@ -121,7 +122,26 @@ public static class VersionReports
                 Sdk.V1.ApiKeyCheck.FingerprintOf),
             HttpClient = context.HttpClient,
             TimeProvider = context.TimeProvider,
+            Languages = languages is null ? null : () => languages,
         });
+    }
+
+    /// <summary>
+    /// "Send configuration to Supertext": one <c>extensions</c> report with the installed modules and
+    /// the language mapping, sent now (also within the hour after a failed report). Nothing with
+    /// reports off. Never throws: on any error the state is returned unchanged with no event.
+    /// </summary>
+    public static async Task<ReporterResult> SendConfigurationAsync(ReportingContext context, ReporterState state, IEnumerable<Extension> extensions, IReadOnlyList<PluginHealth.LanguageMapping> languages)
+    {
+        state ??= ReporterState.Empty;
+        try
+        {
+            return await CreateReporter(context, languages).SendExtensionsAsync(state, extensions);
+        }
+        catch (Exception)
+        {
+            return new ReporterResult(state, state.KeyCheck, null, false);
+        }
     }
 
     /// <summary>Runs one reporter action on the stored state. Never throws: on any error the state is returned unchanged with no event.</summary>

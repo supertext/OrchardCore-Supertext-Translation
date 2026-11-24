@@ -665,3 +665,28 @@ msgstr "Révision des traductions"
 msgctxt "Supertext.OrchardCore.Translation.Views.SupertextSettings.Edit"
 msgid "Translation review: translations into the cultures ticked go through Supertext's review service, so reviewers can check and correct them on the website with the Supertext Localization Review extension. Their corrections are used the next time the content item is translated."
 msgstr "Révision des traductions : les traductions vers les cultures cochées passent par le service de révision de Supertext, afin que les réviseurs puissent les vérifier et les corriger directement sur le site avec l’extension Supertext Localization Review. Leurs corrections sont reprises lors de la prochaine traduction de l’élément."
+
+#: Views/SupertextSettings.Edit.cshtml
+msgctxt "Supertext.OrchardCore.Translation.Views.SupertextSettings.Edit"
+msgid "Send configuration to Supertext"
+msgstr "Envoyer la configuration à Supertext"
+
+#: Views/SupertextSettings.Edit.cshtml
+msgctxt "Supertext.OrchardCore.Translation.Views.SupertextSettings.Edit"
+msgid "Sends Supertext the modules and themes installed in Orchard Core (name, version, enabled or not; Orchard Core's own are left out) and the Supertext language of each culture, so Supertext support can help better. Nothing else is sent, and the settings aren't saved."
+msgstr "Envoie à Supertext les modules et thèmes installés dans Orchard Core (nom, version, activé ou non ; sans ceux d’Orchard Core) et la langue Supertext de chaque culture, afin que le support Supertext puisse mieux vous aider. Rien d’autre n’est envoyé, et les paramètres ne sont pas enregistrés."
+
+#: Controllers/AdminController.cs
+msgctxt "Supertext.OrchardCore.Translation.Controllers.AdminController"
+msgid "Turn on \"Send version information to Supertext\" and save to send the configuration."
+msgstr "Activez « Envoyer les informations de version à Supertext » et enregistrez pour envoyer la configuration."
+
+#: Controllers/AdminController.cs
+msgctxt "Supertext.OrchardCore.Translation.Controllers.AdminController"
+msgid "Sent: {0} modules and themes, {1} languages."
+msgstr "Envoyé : {0} modules et thèmes, {1} langues."
+
+#: Controllers/AdminController.cs
+msgctxt "Supertext.OrchardCore.Translation.Controllers.AdminController"
+msgid "The configuration couldn't be sent. Try again later."
+msgstr "La configuration n’a pas pu être envoyée. Veuillez réessayer plus tard."

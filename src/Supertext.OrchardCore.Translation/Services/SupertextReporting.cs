@@ -161,6 +161,43 @@ public sealed class SupertextReporting(
         }
     }
 
+    /// <summary>
+    /// "Send configuration to Supertext" (Settings → Supertext, administrators): one <c>extensions</c>
+    /// report now. Null with reports off or no site URL. Never throws.
+    /// </summary>
+    public async Task<ReporterResult> SendConfigurationAsync(IEnumerable<Extension> extensions, IReadOnlyList<PluginHealth.LanguageMapping> languages)
+    {
+        await Gate.WaitAsync();
+        try
+        {
+            var settings = await configuration.GetSettingsAsync();
+            var site = await siteService.LoadSiteSettingsAsync();
+            var siteUrl = SiteUrl(site);
+            if (!Enabled(settings) || siteUrl is null)
+            {
+                return null;
+            }
+            var state = LoadState(site);
+            var result = await VersionReports.SendConfigurationAsync(Context(settings, siteUrl), state, extensions, languages);
+            if (result.State.ToJson() != state.ToJson())
+            {
+                StoreState(site, result.State);
+                await siteService.UpdateSiteSettingsAsync(site);
+            }
+            LogResult(result);
+            return result;
+        }
+        catch (Exception e)
+        {
+            logger.LogDebug(e, "Supertext: configuration not sent.");
+            return null;
+        }
+        finally
+        {
+            Gate.Release();
+        }
+    }
+
     private ReportingContext Context(SupertextSettings settings, string siteUrl)
         => new(Enabled(settings), siteUrl, ModuleVersion.Current, OrchardVersion, configuration.EndpointInEffect(settings));
 

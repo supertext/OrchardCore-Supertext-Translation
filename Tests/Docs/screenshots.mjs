@@ -7,9 +7,10 @@
  *   BASE_URL=http://127.0.0.1:8096 DEMO_ADMIN_EMAIL=… DEMO_ADMIN_PASSWORD=… \
  *   DEMO_EDITOR_EMAIL=… DEMO_EDITOR_PASSWORD=… npm run screenshots
  *
- * The demo must run with SUPERTEXT_API_ENDPOINT pointing to the stand-in and WITHOUT
- * SUPERTEXT_API_KEY: the script stores a dummy key in Settings → Supertext like an
- * administrator would. The endpoint hint (a local URL) is hidden in the settings shot.
+ * The demo must run WITHOUT SUPERTEXT_API_KEY: the script stores the key in Settings → Supertext
+ * like an administrator would: DOCS_API_KEY (CI: the secret SUPERTEXT_API_KEY, so the shots show
+ * real Supertext translations), else a dummy key, with SUPERTEXT_API_ENDPOINT pointing to the
+ * stand-in. The endpoint hint (a local URL) is hidden in the settings shot.
  * Start it with SUPERTEXT_REPORT_URL pointing to the stand-in's /report, so saving the
  * settings never sends a version report to the live Supertext Commando Center.
  */
@@ -28,6 +29,10 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PAT
 
 async function session(email, password) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 860 }, deviceScaleFactor: 1, colorScheme: 'light' });
+  // Translating posts the form and the page loads when Supertext is done: with the real API that
+  // can take longer than Playwright's default 30 s.
+  context.setDefaultTimeout(300_000);
+  context.setDefaultNavigationTimeout(300_000);
   const page = await context.newPage();
   await page.goto(`${base}/Login`);
   await page.fill('input[name$="UserName"]', email);
@@ -73,7 +78,7 @@ const closeToasts = (page) => page.evaluate(() => document.querySelectorAll('.to
 const admin = await session(process.env.DEMO_ADMIN_EMAIL, process.env.DEMO_ADMIN_PASSWORD);
 await admin.goto(`${base}/Admin/Settings/supertext`);
 if (await admin.locator('input[name$="ApiKey"]').count()) {
-  await admin.fill('input[name$="ApiKey"]', 'demo-key-for-screenshots');
+  await admin.fill('input[name$="ApiKey"]', process.env.DOCS_API_KEY || 'demo-key-for-screenshots');
 }
 await admin.click('.ta-content button[type=submit].btn-primary');
 await admin.waitForLoadState('networkidle');

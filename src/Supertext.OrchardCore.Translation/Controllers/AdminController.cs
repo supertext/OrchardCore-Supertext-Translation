@@ -11,6 +11,8 @@ using OrchardCore.ContentLocalization.Models;
 using OrchardCore.ContentManagement;
 using OrchardCore.Contents;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Environment.Extensions;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Localization;
 using Supertext.OrchardCore.Translation.Api;
 using Supertext.OrchardCore.Translation.Sdk.Files;
@@ -37,12 +39,66 @@ public sealed class AdminController(
     INotifier notifier,
     SupertextMessages messages,
     SupertextReporting reporting,
+    IExtensionManager extensionManager,
+    IShellFeaturesManager shellFeaturesManager,
     IHtmlLocalizer<AdminController> htmlLocalizer,
     IStringLocalizer<AdminController> stringLocalizer,
     ILogger<AdminController> logger) : Controller
 {
     private readonly IHtmlLocalizer H = htmlLocalizer;
     private readonly IStringLocalizer S = stringLocalizer;
+
+    /// <summary>Extensions that ship with Orchard Core itself (not sent by <see cref="SendConfiguration"/>).</summary>
+    private static readonly string[] CoreThemes = ["TheAdmin", "TheTheme", "TheAgencyTheme", "TheBlogTheme", "TheComingSoonTheme", "SafeMode"];
+
+    /// <summary>
+    /// "Send configuration to Supertext" (Settings → Supertext, administrators): the installed modules and
+    /// themes that aren't Orchard Core's own, and every supported culture with its Supertext code, in one report.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SendConfiguration()
+    {
+        if (!await authorizationService.AuthorizeAsync(User, SupertextPermissions.ManageSupertextSettings))
+        {
+            return Forbid();
+        }
+        var enabled = (await shellFeaturesManager.GetEnabledFeaturesAsync()).Select(f => f.Extension.Id).ToHashSet();
+        var extensions = extensionManager.GetExtensions()
+            .Where(e => !e.Id.StartsWith("OrchardCore", StringComparison.Ordinal) && !CoreThemes.Contains(e.Id))
+            .Select(e => new PluginHealth.Extension(e.Id, string.IsNullOrEmpty(e.Manifest?.Version) ? null : e.Manifest.Version, enabled.Contains(e.Id), string.Equals(e.Manifest?.Type, "Theme", StringComparison.OrdinalIgnoreCase) ? "theme" : "module"))
+            .OrderBy(e => e.Name, StringComparer.Ordinal)
+            .ToList();
+        var settings = await configuration.GetSettingsAsync();
+        var languages = new List<PluginHealth.LanguageMapping>();
+        foreach (var culture in await localizationService.GetSupportedCulturesAsync())
+        {
+            string code;
+            try
+            {
+                code = SupertextConfiguration.TargetLanguageCode(settings, culture);
+            }
+            catch (SupertextException)
+            {
+                code = null;
+            }
+            languages.Add(new PluginHealth.LanguageMapping(culture, code));
+        }
+        var result = await reporting.SendConfigurationAsync(extensions, languages);
+        if (result is null)
+        {
+            await notifier.WarningAsync(H["Turn on \"Send version information to Supertext\" and save to send the configuration."]);
+        }
+        else if (result.Sent)
+        {
+            await notifier.SuccessAsync(H["Sent: {0} modules and themes, {1} languages.", extensions.Count, languages.Count]);
+        }
+        else
+        {
+            await notifier.ErrorAsync(H["The configuration couldn't be sent. Try again later."]);
+        }
+        return Redirect(Url.Action("Index", "Admin", new { area = "OrchardCore.Settings", groupId = "supertext" }) ?? "/admin");
+    }
 
     [HttpGet]
     [Admin("Supertext/Translate/{contentItemId}", "Supertext.Translate")]

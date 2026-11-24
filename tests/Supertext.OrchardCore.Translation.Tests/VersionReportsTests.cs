@@ -182,11 +182,43 @@ public class VersionReportsTests
         var site = new Entity();
         site.Alter<Settings.SupertextReportingState>(s => s.Reporter = stored);
         var state = SupertextReporting.LoadState(site);
-        Assert.Equal(stored, state.ToJson());
+        // Plugin Health 0.2+ adds keyChecks and reportedKeyStatuses (null with one key); everything else is kept.
+        Assert.Equal(stored[..^1] + ",\"keyChecks\":null,\"reportedKeyStatuses\":null}", state.ToJson());
 
         var http = new FakeHttp();
         var result = await VersionReports.RunAsync(ReporterAction.OnRequest, Context(http, enabled: true), state, Key);
         Assert.Null(result.Event);
+        Assert.Empty(http.Requests);
+    }
+
+    [Fact]
+    public async Task Send_configuration_sends_modules_and_the_language_mapping()
+    {
+        var http = new FakeHttp();
+        Extension[] modules = [new("Lombiq.HelpfulExtensions", "13.0.0", true, "module"), new("TheOldTheme", null, false, "theme")];
+        PluginHealth.LanguageMapping[] languages = [new("en-US", "en-US"), new("de-CH", "de-CH"), new("en-IE", null)];
+
+        var result = await VersionReports.SendConfigurationAsync(Context(http, enabled: true), ReporterState.Empty, modules, languages);
+
+        Assert.Equal(ReportEvents.Extensions, result.Event);
+        Assert.True(result.Sent);
+        Assert.Equal(["POST " + ReportUrl], http.Requests);
+        var report = JsonNode.Parse(http.Reports.Single())!;
+        Assert.Equal("extensions", report["event"]!.GetValue<string>());
+        Assert.Equal("Lombiq.HelpfulExtensions", report["extensions"]![0]!["name"]!.GetValue<string>());
+        Assert.Equal("13.0.0", report["extensions"]![0]!["version"]!.GetValue<string>());
+        Assert.False(report["extensions"]![1]!["active"]!.GetValue<bool>());
+        Assert.Equal("de-CH", report["languages"]![1]!["supertext"]!.GetValue<string>());
+        Assert.Null(report["languages"]![2]!["supertext"]);
+    }
+
+    [Fact]
+    public async Task Send_configuration_sends_nothing_with_reports_off()
+    {
+        var http = new FakeHttp();
+        var result = await VersionReports.SendConfigurationAsync(Context(http, enabled: false), ReporterState.Empty, [new("a.b")], [new("de-CH", "de-CH")]);
+
+        Assert.False(result.Sent);
         Assert.Empty(http.Requests);
     }
 

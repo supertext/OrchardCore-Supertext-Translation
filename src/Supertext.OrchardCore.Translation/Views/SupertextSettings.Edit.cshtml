@@ -192,6 +192,12 @@
     }
 </div>
 
+<div class="mb-3 supertext-send-configuration">
+    @* A second submit button of the settings form: posts to SendConfiguration (the settings aren't saved). *@
+    <button type="submit" class="btn btn-secondary" formnovalidate formaction="@Url.Action("SendConfiguration", "Admin", new { area = "Supertext.OrchardCore.Translation" })">@T["Send configuration to Supertext"]</button>
+    <span class="hint d-block">@T["Sends Supertext the modules and themes installed in Orchard Core (name, version, enabled or not; Orchard Core's own are left out) and the Supertext language of each culture, so Supertext support can help better. Nothing else is sent, and the settings aren't saved."]</span>
+</div>
+
 @if (!string.IsNullOrEmpty(Model.ModuleVersion))
 {
     <p class="text-muted small supertext-module-version">

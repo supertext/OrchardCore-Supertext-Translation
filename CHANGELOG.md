@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## Unreleased
 
+- Added: **Send configuration to Supertext** in *Settings → Supertext → Support*: sends Supertext the installed modules and themes (name, version, enabled or not) and the Supertext language of each culture, so Supertext support can help better. Nothing is sent while version information is off. All four interface languages. Supertext Plugin Health 0.4.0.
+- Changed: the screenshots in the guides show real Supertext translations (the E2E workflow takes them with the live API; version reports still go to the stand-in).
 - Changed: the package now requires System.Security.Cryptography.Pkcs 10.0.15 or later (was 10.0.14; latest .NET 10 servicing release).
 - Changed: the demo uses AngleSharp 1.10.4 (was 1.10.1).
 

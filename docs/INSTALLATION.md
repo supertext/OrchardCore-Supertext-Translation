@@ -164,6 +164,8 @@ Turn it on per culture that is translated **into**: **Settings → Supertext →
 
 **The API key check** runs whether or not version information is sent: every time you save Settings → Supertext; when a key from `SUPERTEXT_API_KEY` (or the configuration) is new or changed, the next time an administrator or editor opens a Supertext page (the key is compared by a fingerprint kept in the site settings, never the key itself); and when Supertext rejects the key during a translation. It's Supertext's cost-free `features` call. **Settings → Supertext** shows the latest result with its time under **API key check**.
 
+**Send configuration to Supertext** (**Settings → Supertext → Support**, needs *Manage Supertext settings*) sends Supertext, on demand, the modules and themes installed in Orchard Core (name, version, enabled or not; Orchard Core's own are left out) and the Supertext language of each culture, so Supertext support can help with a setup question. It sends nothing else and doesn't save the settings; nothing is sent while version information is off. A notification then says how many modules, themes and languages were sent.
+
 **The ping endpoint** `GET <site>/supertext/ping?challenge=…` is public (no login) and answers only `{"ok":true,"plugin":"OrchardCore-Supertext-Translation","challenge":"…"}`, so Supertext can see that the site is reachable from the internet. It returns nothing else: no versions, no settings, no data, and it is never cached (`Cache-Control: no-store`). If a firewall or an authentication proxy protects the whole site, Supertext simply sees it as unreachable.
 
 The module keeps its state (what was reported last, the latest key check) in the site settings document, next to the Supertext settings.
