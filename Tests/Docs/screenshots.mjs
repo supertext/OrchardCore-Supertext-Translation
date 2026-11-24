@@ -144,7 +144,11 @@ const menuBox = await aboutRow.locator('.dropdown-menu.show').boundingBox();
 await page.screenshot({ path: out + 'localizations-menu.png', clip: { x: rowBox.x, y: rowBox.y - 8, width: rowBox.width, height: menuBox.y + menuBox.height - rowBox.y + 16 } });
 console.log('wrote localizations-menu.png');
 // The menu opens over the admin's left sidebar, which would take a real click: click the link in the page.
+const listPath = new URL(page.url()).pathname;
 await aboutRow.locator('.dropdown-menu.show a[title="Create German (Switzerland)"]').evaluate((a) => a.click());
+// Orchard's Localize action translates the copy before it redirects to the editor: with the real
+// API that takes a while, so wait for the editor's address, not just a quiet network.
+await page.waitForURL((u) => u.pathname !== listPath && !/localize/i.test(u.pathname), { timeout: 300_000 });
 await page.waitForLoadState('networkidle');
 await page.setViewportSize({ width: 1280, height: 900 });
 await shot(page, 'localize-translated.png', '.ta-content', { maxHeight: 620 });
