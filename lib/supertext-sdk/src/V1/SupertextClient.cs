@@ -401,6 +401,61 @@ public sealed partial class SupertextClient
         return count;
     }
 
+    /// <summary>
+    /// Corrections reviewers made that the integration hasn't written into the CMS yet (Supertext
+    /// Localization Review; spec/corrections.json). Only the review service answers this: against
+    /// Supertext's API it throws <see cref="SupertextErrorCodes.NotFound"/>. Follows all pages.
+    /// <see cref="Correction.SegmentId"/> is the <c>data-st-id</c> the integration sent, so this is useful
+    /// when the integration builds its documents with its own ids (<see cref="TranslateHtmlAsync"/>).
+    /// </summary>
+    /// <param name="targetLang">Only this target language; null: all.</param>
+    /// <param name="sourceLang">Only this source language; null: all.</param>
+    /// <param name="politeness">Only this politeness; null: all.</param>
+    /// <param name="cancellationToken">Cancels the requests.</param>
+    public async Task<IReadOnlyList<Correction>> PendingCorrectionsAsync(string? targetLang = null, string? sourceLang = null,
+        Politeness? politeness = null, CancellationToken cancellationToken = default)
+    {
+        var all = new List<Correction>();
+        string? after = null;
+        for (var page = 0; page < Corrections.MaxPages; page++)
+        {
+            var response = await SendAsync(HttpMethod.Get, Corrections.Path(targetLang, sourceLang, politeness, after), null, cancellationToken).ConfigureAwait(false);
+            var (corrections, next) = Corrections.ParsePage(response.Body);
+            all.AddRange(corrections);
+            if (next is null || next == after)
+            {
+                break;
+            }
+            after = next;
+        }
+        return all.AsReadOnly();
+    }
+
+    /// <summary>
+    /// Tells the review service these corrections are in the CMS now; returns how many it accepted.
+    /// Only the fetched <see cref="Correction.Version"/> counts: a newer correction stays pending.
+    /// </summary>
+    /// <param name="corrections">The corrections written into the CMS.</param>
+    /// <param name="cancellationToken">Cancels the requests.</param>
+    public async Task<int> AcknowledgeCorrectionsAsync(IEnumerable<Correction> corrections, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(corrections);
+        var total = 0;
+        foreach (var chunk in corrections.Chunk(Corrections.AcknowledgeBatchSize))
+        {
+            var body = Corrections.AcknowledgeBody(chunk);
+            var response = await SendAsync(HttpMethod.Post, "review/corrections/acknowledge",
+                () =>
+                {
+                    var content = new ByteArrayContent(Encoding.UTF8.GetBytes(body));
+                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                    return content;
+                }, cancellationToken).ConfigureAwait(false);
+            total += Corrections.AcknowledgedCount(response.Body);
+        }
+        return total;
+    }
+
     private static string FilePath(string fileId) => "translate/ai/file/" + Uri.EscapeDataString(fileId);
 
     private static void AddField(MultipartFormDataContent form, string name, string value)
